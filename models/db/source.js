@@ -8,7 +8,7 @@ var _ = require('underscore'),
     };
 
 // Database mapping
-Source._dbTable = 'images';
+Source._dbTable = 'sources';
 Source._primaryKey = 'id';
 Source._dbMap = {
     id: 'source_id',
