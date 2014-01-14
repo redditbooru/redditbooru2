@@ -1,5 +1,6 @@
 var _ = require('underscore'),
     defer = require('q').defer,
+    util = require('util'),
     Dal = require('../../lib/dal.js'),
     User = function(obj) {
         if (_.isObject(obj)) {
@@ -7,25 +8,9 @@ var _ = require('underscore'),
         }
     };
 
-User.getByUserName = function(name) {
-    var retVal = defer();
-
-    User
-        .query([{ col: 'name', val: name }])
-        .then(function(rows) {
-            if (rows.length === 0) {
-                // create user
-                retVal.resolve(0);
-            } else {
-                retVal.resolve(parseInt(rows[0].id, 10));
-            }
-        })
-        .fail(function(err) {
-            retVal.reject(err);
-        });
-
-    return retVal.promise;
-};
+// Inherit Dal
+util.inherits(User, Dal);
+_.extend(User, Dal);
 
 // Database mapping
 User._dbTable = 'users';
@@ -41,6 +26,31 @@ User._dbMap = {
     hasAvatar: 'user_avatar'
 };
 
-_.extend(User, Dal);
+/**
+ * Looks up the user in the database and returns it.
+ * If not found, the record is created and returned
+ */
+User.getByUserName = function(name) {
+    var retVal = defer();
+
+    User
+        .query([{ col: 'name', val: name }])
+        .then(function(rows) {
+            if (rows.length === 0) {
+                var user = new User();
+                user.name = name;
+                user.sync().then(function() {
+                    retVal.resolve(user.id);
+                });
+            } else {
+                retVal.resolve(parseInt(rows[0].id, 10));
+            }
+        })
+        .fail(function(err) {
+            retVal.reject(err);
+        });
+
+    return retVal.promise;
+};
 
 module.exports = User;
