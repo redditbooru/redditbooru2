@@ -43,7 +43,7 @@ Post.createFromRedditPost = function(post) {
                 user_id: userId,
                 post_date: post.created,
                 post_title: post.title,
-                post_link: post.link,
+                post_link: post.url,
                 nsfw: post.over_18,
                 post_score: post.score,
                 post_processed: false,
