@@ -14,7 +14,7 @@ _.extend(User, Dal);
 
 // Database mapping
 User._dbTable = 'users';
-User._primaryKey = 'id';
+User._dbPrimaryKey = 'id';
 User._dbMap = {
     id: 'user_id',
     name: 'user_name',

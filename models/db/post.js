@@ -13,34 +13,9 @@ var _ = require('underscore'),
 util.inherits(Post, Dal);
 _.extend(Post, Dal);
 
-Post.createFromRedditPost = function(post) {
-
-    var retVal = defer();
-
-    User.getByUserName(post.author)
-        .then(function(userId) {
-            retVal.resolve({
-                externalId: post.id,
-                userId: userId,
-                dateCreated: post.created,
-                title: post.title,
-                link: post.link,
-                nsfw: post.over_18,
-                score: post.score,
-                processed: false,
-                visible: false
-            });
-        })
-        .fail(function(err) {
-            retVal.reject(err);
-        });
-
-    return retVal.promise;
-};
-
 // Database mapping
 Post._dbTable = 'posts';
-Post._primaryKey = 'id';
+Post._dbPrimaryKey = 'id';
 Post._dbMap = {
     id: 'post_id',
     sourceId: 'source_id',
@@ -55,6 +30,31 @@ Post._dbMap = {
     processed: 'post_processed',
     visible: 'post_visible',
     meta: 'post_meta'
+};
+
+Post.createFromRedditPost = function(post) {
+
+    var retVal = defer();
+
+    User.getByUserName(post.author)
+        .then(function(userId) {
+            retVal.resolve(new Post({
+                post_external_id: post.id,
+                user_id: userId,
+                post_date: post.created,
+                post_title: post.title,
+                post_link: post.link,
+                nsfw: post.over_18,
+                post_score: post.score,
+                post_processed: false,
+                post_visible: false
+            }));
+        })
+        .fail(function(err) {
+            retVal.reject(err);
+        });
+
+    return retVal.promise;
 };
 
 module.exports = Post;

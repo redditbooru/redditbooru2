@@ -9,7 +9,7 @@ var _ = require('underscore'),
 
 // Database mapping
 Source._dbTable = 'sources';
-Source._primaryKey = 'id';
+Source._dbPrimaryKey = 'id';
 Source._dbMap = {
     id: 'source_id',
     name: 'source_name',

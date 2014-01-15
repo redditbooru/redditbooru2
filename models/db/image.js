@@ -9,7 +9,7 @@ var _ = require('underscore'),
 
 // Database mapping
 Image._dbTable = 'images';
-Image._primaryKey = 'id';
+Image._dbPrimaryKey = 'id';
 Image._dbMap = {
     id: 'image_id',
     postId: 'post_id',
