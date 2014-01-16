@@ -43,6 +43,13 @@ describe('ImageResolver test suite', function() {
         it('should resolve an imgur album to an array of images', function(done) {
             ImageResolver.getImageListFromUrl('http://imgur.com/a/hiwIT').then(function(images) {
                 expect(images.length).to.be(13);
+                // We'll randomly sample the images instead of testing all 13
+                expect(images[0]).to.be('http://i.imgur.com/DppEJyE.jpg');
+                expect(images[4]).to.be('http://i.imgur.com/ugRQAVk.jpg');
+                expect(images[11]).to.be('http://i.imgur.com/xYmWQe6.jpg');
+                done();
+            }).fail(function(error) {
+                expect(error).to.be(true);
                 done();
             });
         });
