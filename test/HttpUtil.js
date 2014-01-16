@@ -9,4 +9,14 @@ describe('HttpUtil test suite', function() {
             done();
         });
     });
+
+    it('should download with faked referer', function(done) {
+        HttpUtil.get('http://i1.pixiv.net/img125/img/komone_ushio/37592434_m.jpg', true).then(function(data) {
+            expect(data).to.not.be(null);
+            done();
+        }).fail(function() {
+            expect(false).to.be(true);
+        });
+    });
+
 });
