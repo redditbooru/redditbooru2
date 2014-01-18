@@ -40,7 +40,7 @@ describe('ImageResolver test suite', function() {
             });
         });
 
-        it('should resolve an imgur album to an array of images', function(done) {
+        it('should resolve an imgur album to an array of URLs', function(done) {
             ImageResolver.getImageListFromUrl('http://imgur.com/a/hiwIT').then(function(images) {
                 expect(images.length).to.be(13);
                 // We'll randomly sample the images instead of testing all 13
@@ -54,6 +54,26 @@ describe('ImageResolver test suite', function() {
             });
         });
 
+    });
+
+    describe('mediacru.sh tests', function() {
+        it('should get a single image', function(done) {
+            ImageResolver.getImageListFromUrl('https://mediacru.sh/uq82_GroAzNA').then(function(images) {
+                expect(images.length).to.be(1);
+                expect(images[0]).to.be('https://mediacru.sh/uq82_GroAzNA.png');
+                done();
+            });
+        });
+    });
+
+    describe('tumblr tests', function() {
+        it('should get images from the post', function(done) {
+            ImageResolver.getImageListFromUrl('http://openhentai.tumblr.com/post/66312652243/i-think-she-should-be-renamed-to-sex-maniac-with').then(function(images) {
+                expect(images.length).to.be(1);
+                expect(images[0]).to.be('http://24.media.tumblr.com/51d2151753679b4b0aed3d82eb570650/tumblr_mvwzi3LtKo1r6e7z3o1_1280.jpg');
+                done();
+            });
+        });
     });
 
 });
