@@ -76,4 +76,14 @@ describe('ImageResolver test suite', function() {
         });
     });
 
+    describe('yande.re tests', function() {
+        it('should return the image url', function(done) {
+            ImageResolver.getImageListFromUrl('https://yande.re/post/show/278550/akemi_homura-kaname_madoka-kimono-puella_magi_mado').then(function(images) {
+                expect(images.length).to.be(1);
+                expect(images[0]).to.be('https://yuno.yande.re/image/f8ad7d21da4d22a5250d264ff3b30d20/yande.re%20278550%20akemi_homura%20kaname_madoka%20kimono%20puella_magi_madoka_magica%20tagme%20yuri.jpg');
+                done();
+            });
+        });
+    });
+
 });
