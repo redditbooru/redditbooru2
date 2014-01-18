@@ -3,9 +3,9 @@ var HttpUtil = require('../lib/HttpUtil.js'),
 
 describe('HttpUtil test suite', function() {
     it('should return the file\'s contents', function(done) {
-        HttpUtil.get('http://zombo.com/').then(function(data) {
+        HttpUtil.get('http://microsoft.com/').then(function(data) {
             data = data.toString();
-            expect(data.indexOf('ZOMBO')).to.not.be(-1);
+            expect(data.indexOf('<title>')).to.not.be(-1);
             done();
         });
     });
