@@ -86,4 +86,16 @@ describe('ImageResolver test suite', function() {
         });
     });
 
+    describe('minus album tests', function() {
+        it('should return an array of URLs', function(done) {
+            ImageResolver.getImageListFromUrl('http://grozzle.minus.com/m0ekt3T7HhlBa').then(function(images) {
+                expect(images.length).to.be(3);
+                expect(images[0]).to.be('http://i.minus.com/iHZnaG9vb17lh.jpg');
+                expect(images[1]).to.be('http://i.minus.com/iEN2H4DYzClia.jpg');
+                expect(images[2]).to.be('http://i.minus.com/iBMwPaYaS1BHI.png');
+                done();
+            });
+        });
+    });
+
 });
