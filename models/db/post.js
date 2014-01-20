@@ -1,6 +1,7 @@
 var _ = require('underscore'),
     defer = require('q').defer,
     util = require('util'),
+    Mongo = require('../../lib/mongo.js'),
     Dal = require('../../lib/dal.js'),
     User = require('./user.js'),
     Post = function(obj) {
@@ -55,6 +56,20 @@ Post.createFromRedditPost = function(post) {
         });
 
     return retVal.promise;
+};
+
+/**
+ * @override
+ * Updates cache copy of the post data
+ */
+Post.prototype.sync = function() {
+
+    // We only need to run on updates since the entry is created by Image
+    if (this.id) {
+        Mongo.update('posts', { score: this.score }, { postId: this.id });
+    }
+
+    return Dal.prototype.sync.call(this);
 };
 
 module.exports = Post;
