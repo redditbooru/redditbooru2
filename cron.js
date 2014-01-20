@@ -3,13 +3,19 @@ var _ = require('underscore'),
     Source = require('./models/db/source.js'),
     Post = require('./models/db/post.js'),
     Image = require('./models/db/image.js'),
+    ImagePost = require('./models/db/postimage.js'),
+    Item = require('./models/cache/item.js'),
     reddit = require('./lib/reddit.js'),
+    ImageResolver = require('./lib/ImageResolver.js'),
+    mongo = require('./lib/mongo.js');
 
     /**
      * Constants
      */
     ACTION_UPDATE = 'update',
     ACTION_CREATE = 'create',
+    TIMEOUT_GET_DATA = 60000, // Fetch reddit data once every minute
+    TIMEOUT_RUN_QUEUE = 2000, // Queue should be checked ever couple seconds
 
     // Queue of things to act upon
     actionQueue = [],
@@ -23,24 +29,27 @@ var _ = require('underscore'),
 
             _.each(rows, function(source) {
 
+                console.log(' -- Getting post data for ' + source.name + ' -- ');
+
                 reddit
-                    .getDataListing(source.name)
+                    .getDataListing(source.name + '/new')
                     .then(function(data) {
-                        
+
                         if (_.has(data, 'data') && _.has(data.data, 'children')) {
                             _.each(data.data.children, function(post) {
                                 Post
                                     .createFromRedditPost(post.data)
                                     .then(function(post) {
-                                        
+
                                         // Check for an existing post with this reddit ID
                                         Post.query([ { col: 'externalId', val: post.externalId } ]).then(function(row) {
                                             if (!row.length) {
-                                                post.sync().then(function() {
-                                                    actionQueue.push({ action:ACTION_CREATE, data:post });
-                                                });
+                                                console.log('[  NEW  ] ' + post.title);
+                                                post.sourceId = source.id;
+                                                actionQueue.push({ action:ACTION_CREATE, data:post });
                                             } else {
-                                                actionQueue.push({ 
+                                                console.log('[UPDATED] ' + post.title);
+                                                actionQueue.push({
                                                     action:ACTION_UPDATE,
                                                     data:{
                                                         post: post,
@@ -62,19 +71,74 @@ var _ = require('underscore'),
             });
 
         });
-    
+
+        console.log(' -- Finished fetching reddit data -- ');
+
+        setTimeout(getRedditData, TIMEOUT_GET_DATA);
+
+    },
+
+    assignImageToPost = function(postId, imageId, logHead) {
+        (new ImagePost({ post_id: postId, image_id: imageId })).sync().then(function(result) {
+            console.log(logHead + 'Image ' + imageId + ' assigned successfully');
+        }).fail(function(err) {
+            console.log(logHead + 'Error syncing image relationship for ' + imageId + ': ' + err);
+        });
     },
 
     /**
      * Acts on items in the action Queue
      */
     queueRunner = function() {
-
+        console.log('-- Processing queue --');
         while (actionQueue.length > 0) {
 
-            var item = actionQueue.shift();
+            var item = actionQueue.shift(),
+                logHead;
             switch (item.action) {
                 case ACTION_CREATE:
+                    logHead = '[' + item.data.externalId + '] ';
+                    console.log(logHead + 'Inserting into database');
+                    item.data.sync().then(function(post) {
+                        ImageResolver.getImageListFromUrl(post.link).then(function(images) {
+                            _.each(images, function(url) {
+                                // Check to see if this image has been loaded already. We want to avoid dupes
+                                Image.query([ { col: 'url', val: url } ]).then(function(result) {
+                                    var imageObj = null;
+                                    if (0 === result.length) {
+                                        Image.createFromUrl(url).then(function(image) {
+                                            console.log(logHead + 'Image ' + url + ' loaded and processed');
+                                            image.sync().then(function(image) {
+                                                console.log(logHead + 'Image ' + url + ' synced to database with ID ' + image.id);
+
+                                                // Assign the image to the post
+                                                assignImageToPost(post.id, image.id, logHead);
+
+                                                // Create the cache item
+                                                var item = Item.createItem(post, image);
+                                                mongo.save('posts', item).then(function(result) {
+                                                    console.log(logHead + 'Cache item created for ' + image.id);
+                                                }).fail(function(err) {
+                                                    console.log(logHead + 'Error syncing image to mongo cache: ' + err);
+                                                });
+                                            });
+                                        }).fail(function(err) {
+                                            console.log(logHead + 'Error creating image from ' + url);
+                                        });
+                                    } else {
+                                        console.log(logHead + 'Image repurposed from ' + result[0].id);
+                                        assignImageToPost(post.id, result[0].id, logHead);
+                                    }
+
+                                }).fail(function(err) {
+                                    console.log(logHead + 'Error looking up image URL ' + url + ': ' + err);
+                                });
+                            });
+                        });
+                    }).fail(function(err) {
+                        console.log(logHead + 'Error creating post: ' + err);
+                    });
+                    break;
                 case ACTION_UPDATE:
                     // Update the database
                     item.data.post.id = item.data.row.id;
@@ -85,7 +149,7 @@ var _ = require('underscore'),
         }
 
         // Revisit in a couple seconds
-        setTimeout(queueRunner, 2000);
+        setTimeout(queueRunner, TIMEOUT_RUN_QUEUE);
 
     };
 
