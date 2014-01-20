@@ -15,7 +15,7 @@ var _ = require('underscore'),
     ACTION_UPDATE = 'update',
     ACTION_CREATE = 'create',
     TIMEOUT_GET_DATA = 60000, // Fetch reddit data once every minute
-    TIMEOUT_RUN_QUEUE = 2000, // Queue should be checked ever couple seconds
+    TIMEOUT_RUN_QUEUE = 5000, // Queue should be checked every five seconds
 
     // Queue of things to act upon
     actionQueue = [],
@@ -23,59 +23,64 @@ var _ = require('underscore'),
     /**
      * Retrieves reddit data for later updates
      */
-    getRedditData = function() {
+    getSourcesData = function() {
 
         Source.query([ { col: 'enabled', val: true }, { col: 'type', val: 'subreddit' } ]).then(function(rows) {
 
             _.each(rows, function(source) {
 
-                console.log(' -- Getting post data for ' + source.name + ' -- ');
-
-                reddit
-                    .getDataListing(source.name + '/new')
-                    .then(function(data) {
-
-                        if (_.has(data, 'data') && _.has(data.data, 'children')) {
-                            _.each(data.data.children, function(post) {
-                                Post
-                                    .createFromRedditPost(post.data)
-                                    .then(function(post) {
-
-                                        // Check for an existing post with this reddit ID
-                                        Post.query([ { col: 'externalId', val: post.externalId } ]).then(function(row) {
-                                            if (!row.length) {
-                                                console.log('[  NEW  ] ' + post.title);
-                                                post.sourceId = source.id;
-                                                actionQueue.push({ action:ACTION_CREATE, data:post });
-                                            } else {
-                                                console.log('[UPDATED] ' + post.title);
-                                                actionQueue.push({
-                                                    action:ACTION_UPDATE,
-                                                    data:{
-                                                        post: post,
-                                                        row: row[0]
-                                                    }
-                                                });
-                                            }
-                                        });
-
-                                    })
-                                    .fail(function(err) {
-                                        console.log(err);
-                                    });
-                            });
-                        }
-
-                    });
+                getRedditData(source.name + '/new', source);
+                getRedditData(source.name + '/top/', source, 'all');
 
             });
 
         });
 
-        console.log(' -- Finished fetching reddit data -- ');
+        setTimeout(getSourcesData, TIMEOUT_GET_DATA);
 
-        setTimeout(getRedditData, TIMEOUT_GET_DATA);
+    },
 
+    getRedditData = function(subreddit, source, period) {
+        console.log(' -- Getting post data for ' + subreddit + ' -- ');
+
+        reddit
+            .getDataListing(subreddit, 100, period)
+            .then(function(data) {
+
+                console.log(' -- Finished fetching data for ' + subreddit + ' -- ');
+
+                if (_.has(data, 'data') && _.has(data.data, 'children')) {
+                    _.each(data.data.children, function(post) {
+                        Post
+                            .createFromRedditPost(post.data)
+                            .then(function(post) {
+
+                                // Check for an existing post with this reddit ID
+                                Post.query([ { col: 'externalId', val: post.externalId } ]).then(function(row) {
+                                    if (!row.length) {
+                                        console.log('[  NEW  ] ' + post.title);
+                                        post.sourceId = source.id;
+                                        actionQueue.push({ action:ACTION_CREATE, data:post });
+                                    } else {
+                                        console.log('[UPDATED] ' + post.title);
+                                        actionQueue.push({
+                                            action:ACTION_UPDATE,
+                                            data:{
+                                                post: post,
+                                                row: row[0]
+                                            }
+                                        });
+                                    }
+                                });
+
+                            })
+                            .fail(function(err) {
+                                console.log(err);
+                            });
+                    });
+                }
+
+            });
     },
 
     assignImageToPost = function(postId, imageId, logHead) {
@@ -90,7 +95,7 @@ var _ = require('underscore'),
      * Acts on items in the action Queue
      */
     queueRunner = function() {
-        console.log('-- Processing queue --');
+        console.log('-- Processing queue (' + actionQueue.length + ' items) --');
         while (actionQueue.length > 0) {
 
             var item = actionQueue.shift(),
@@ -153,5 +158,5 @@ var _ = require('underscore'),
 
     };
 
-getRedditData();
+getSourcesData();
 queueRunner();
