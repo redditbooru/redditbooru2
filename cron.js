@@ -25,6 +25,8 @@ var _ = require('underscore'),
     // Queue of things to act upon
     actionQueue = [],
     activeItems = 0,
+    oldActiveItems = 0,
+    oldQueueLength = 0,
 
     logActionComplete = function(logHead, message) {
         console.log(logHead + ' ' + message);
@@ -193,7 +195,7 @@ var _ = require('underscore'),
      * Acts on items in the action Queue
      */
     queueRunner = function() {
-        if (actionQueue.length != 0 || activeItems != 0) {
+        if (actionQueue.length !== oldQueueLength || activeItems !== oldActiveItems) {
             console.log('-- Processing queue (' + actionQueue.length + ' items, ' + activeItems + ' active) --');
         }
         while (actionQueue.length > 0 && activeItems < MAX_ACTIVE_ITEMS) {
@@ -213,6 +215,9 @@ var _ = require('underscore'),
             }
 
         }
+
+        oldQueueLength = actionQueue.length;
+        oldActiveItems = activeItems;
 
         // Revisit in a couple seconds
         setTimeout(queueRunner, TIMEOUT_RUN_QUEUE);
