@@ -8,7 +8,7 @@ describe('mongo test suite', function() {
         subtitle = 'Yes it is';
 
     it('should insert a document', function(done) {
-        Mongo.sync('test', { id: id, title: title, subtitle: subtitle }).then(function(result) {
+        Mongo.update('test', { id: id, title: title, subtitle: subtitle }).then(function(result) {
             expect(true).to.be.ok();
             done();
         }).fail(function(err) {
