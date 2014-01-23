@@ -157,7 +157,7 @@ var _ = require('underscore'),
                                     logActionComplete(logHead, 'Unable to sync image: ' + err);
                                 });
                             }).fail(function(err) {
-                                logActionComplete(logHead, 'Error creating image from ' + url);
+                                logActionComplete(logHead, 'Error creating image from ' + url + ': ' + err);
                             });
                         } else {
                             logActionComplete(logHead, 'Image repurposed from ' + result[0].id);
