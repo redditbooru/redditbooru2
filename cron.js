@@ -1,5 +1,6 @@
 global._db = require('./lib/db.js');
 var _ = require('underscore'),
+    fs = require('fs'),
     Source = require('./models/db/source.js'),
     Post = require('./models/db/post.js'),
     Image = require('./models/db/image.js'),
@@ -28,7 +29,10 @@ var _ = require('underscore'),
     oldActiveItems = 0,
     oldQueueLength = 0,
 
+    _log = fs.createWriteStream('out.log', { flags:'a' }),
+
     logActionComplete = function(logHead, message) {
+        _log.write(logHead + ' ' + message + '\n');
         console.log(logHead + ' ' + message);
         activeItems--;
     },
@@ -182,6 +186,7 @@ var _ = require('underscore'),
             console.log(logHead + ' Updating existing item');
             item.data.row.score = item.data.post.score;
             item.data.row.dateUpdated = time;
+            item.data.row.keywords = item.data.post.keywords;
             activeItems++;
             item.data.row.sync().then(function(result) {
                 logActionComplete(logHead, 'Post updated');
@@ -226,3 +231,8 @@ var _ = require('underscore'),
 
 getSourcesData();
 queueRunner();
+
+process.on('exit', function() {
+    _log.close();
+    console.log('Shutting down');
+});
