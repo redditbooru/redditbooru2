@@ -46,7 +46,7 @@ Post.createFromRedditPost = function(post) {
                 post_date: post.created,
                 post_updated: Math.round(Date.now() / 1000),
                 post_title: post.title,
-                post_keywords: Post.getKeywords(post.title + ' ' + post.link_flair_text),
+                post_keywords: Post.getKeywords(post.title + ' ' + (post.link_flair_text ? post.link_flair_text : '')),
                 post_link: post.url,
                 post_nsfw: post.over_18,
                 post_score: post.score,
@@ -95,7 +95,7 @@ Post.prototype.sync = function() {
 
     // We only need to run on updates since the entry is created by Image
     if (this.id) {
-        Mongo.update('posts', { score: this.score }, { postId: this.id });
+        Mongo.update('posts', { score: this.score, keywords: this.keywords }, { postId: this.id });
     }
 
     return Dal.prototype.sync.call(this);
