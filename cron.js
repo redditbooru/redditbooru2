@@ -79,6 +79,7 @@ var _ = require('underscore'),
 
                 if (_.has(data, 'data') && _.has(data.data, 'children')) {
                     _.each(data.data.children, function(post) {
+                        var author = post.data.author;
                         Post
                             .createFromRedditPost(post.data)
                             .then(function(post) {
@@ -90,7 +91,11 @@ var _ = require('underscore'),
                                         logActionComplete(logHead, 'New post: ' + post.title + ' (' + post.externalId + ')');
                                         console.log('[  NEW  ] ' + post.title);
                                         post.sourceId = source.id;
-                                        actionQueue.push({ action:ACTION_CREATE, data:post });
+                                        actionQueue.push({ action:ACTION_CREATE, data: {
+                                            post: post,
+                                            source: source,
+                                            author: author
+                                        }});
                                     } else {
                                         logActionComplete(logHead, 'Old post: ' + post.title + ' (' + post.externalId + ')');
                                         actionQueue.push({
@@ -125,6 +130,9 @@ var _ = require('underscore'),
     },
 
     createPostEntry = function(item, logHead) {
+        var source = item.data.source,
+            author = item.data.author;
+        item.data = item.data.post;
         console.log(logHead + 'Inserting into database');
         activeItems++;
         item.data.sync().then(function(post) {
@@ -150,7 +158,7 @@ var _ = require('underscore'),
                                     assignImageToPost(post.id, image.id, logHead);
 
                                     // Create the cache item
-                                    var item = Item.createItem(post, image);
+                                    var item = Item.createItem(post, image, source, author);
                                     activeItems++;
                                     mongo.save('posts', item).then(function(result) {
                                         logActionComplete(logHead, 'Cache item created for ' + image.id);
@@ -211,7 +219,7 @@ var _ = require('underscore'),
                     getRedditData(item.data.endpoint, item.data.source);
                     break;
                 case ACTION_CREATE:
-                    createPostEntry(item, '[' + item.data.externalId + '] ');
+                    createPostEntry(item, '[' + item.data.post.externalId + '] ');
                     break;
                 case ACTION_UPDATE:
                     // Update the database

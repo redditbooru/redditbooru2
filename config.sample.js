@@ -1,4 +1,5 @@
 module.exports = {
+    CDN_PATH: 'http://cdn.awwni.me/test/',
     MYSQL_CONFIG: {
         user: 'DB_USER',
         password: 'DB_PASSWORD',

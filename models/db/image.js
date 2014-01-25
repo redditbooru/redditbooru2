@@ -5,9 +5,14 @@ var _ = require('underscore'),
     Dal = require('../../lib/dal.js'),
     ImageProcessor = require('../../lib/ImageProcessor.js'),
     ImageIO = require('../../lib/ImageIO.js'),
+    cdnPath = require('../../config').CDN_PATH,
+
     Image = function(obj) {
         if (_.isObject(obj)) {
             Image.copyRowFromDb(this, obj);
+            if (this.id) {
+                this.cdnUrl = this._generateCdnUrl();
+            }
         }
     };
 
@@ -22,7 +27,7 @@ Image._dbMap = {
     id: 'image_id',
     sourceId: 'source_id',
     url: 'image_url',
-    cdnUrl: 'image_cdn_url',
+    type: 'image_type',
     width: 'image_width',
     height: 'image_height',
     histR1: 'image_hist_r1',
@@ -37,9 +42,12 @@ Image._dbMap = {
     histB2: 'image_hist_b2',
     histB3: 'image_hist_b3',
     histB4: 'image_hist_b4',
-    isGood: 'image_good',
-    contentRating: 'image_rating'
+    isGood: 'image_good'
 };
+
+Image.prototype._generateCdnUrl = function() {
+    return cdnPath + base.decTo36(this.id) + '.' + this.type;
+}
 
 /**
  * Creates an image object with histogram data from a URL
@@ -63,7 +71,7 @@ Image.createFromUrl = function(url) {
 
         // Bolt on the image type for any future insert sync operation
         obj = new Image(obj);
-        obj._imageType = image.imageType;
+        obj.type = image.imageType;
         retVal.resolve(obj);
 
     }).fail(function(err) {
@@ -82,11 +90,12 @@ Image.prototype.sync = function() {
     var retVal = defer();
         insert = !(this.id > 0),
         that = this;
-console.log('syncing...', insert, this.id);
+
     Dal.prototype.sync.call(this).then(function(image) {
-        if (insert && that._imageType) {
-            var fileName = base.decTo36(image.id) + '.' + that._imageType;
+        if (insert && that.type) {
+            var fileName = base.decTo36(image.id) + '.' + that.type;
             ImageIO.saveImage(image.url, fileName).then(function() {
+                image.cdnUrl = image._generateCdnUrl();
                 retVal.resolve(image);
             }).fail(function(err) {
                 retVal.reject(err);

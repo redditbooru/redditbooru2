@@ -14,20 +14,24 @@ var _ = require('underscore'),
 
     Item = {
 
-        createItem: function(post, image) {
+        createItem: function(post, image, source, author) {
             return {
                 postId: post.id,
                 imageId: image.id,
                 sourceId: post.sourceId,
+                sourceName: source.name,
+                baseUrl: source.baseUrl,
+                userId: post.userId,
+                userName: author,
                 title: post.title,
                 keywords: post.keywords,
-                link: post.link,
+                link: image.cdnUrl,
                 redditId: post.externalId,
                 score: post.score,
                 date: post.dateCreated,
                 nsfw: post.nsfw,
                 width: image.width,
-                height: image.height
+                height: image.height,
             };
         },
 
