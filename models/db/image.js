@@ -5,6 +5,7 @@ var _ = require('underscore'),
     Dal = require('../../lib/dal.js'),
     ImageProcessor = require('../../lib/ImageProcessor.js'),
     ImageIO = require('../../lib/ImageIO.js'),
+    Item = require('../cache/item'),
     cdnPath = require('../../config').CDN_PATH,
 
     Image = function(obj) {
@@ -47,7 +48,7 @@ Image._dbMap = {
 
 Image.prototype._generateCdnUrl = function() {
     return cdnPath + base.decTo36(this.id) + '.' + this.type;
-}
+};
 
 /**
  * Creates an image object with histogram data from a URL
@@ -74,6 +75,100 @@ Image.createFromUrl = function(url) {
         obj.type = image.imageType;
         retVal.resolve(obj);
 
+    }).fail(function(err) {
+        retVal.reject(err);
+    });
+
+    return retVal.promise;
+};
+
+/**
+ * Reverse image search is here
+ */
+Image.queryByImage = function(options) {
+    var retVal = defer(),
+        runQuery = function(image) {
+            Image._queryByImage(image, options).then(function(results) {
+                retVal.resolve(results);
+            }).fail(function(err) {
+                retVal.reject(err);
+            });
+        };
+
+    if (options.imageUrl) {
+        ImageProcessor.processFromUrl(options.imageUrl).then(function(image) {
+            runQuery(image);
+        }).fail(function(err) {
+            retVal.reject(err);
+        });
+    } else if (options.image instanceof Image) {
+        runQuery(options.image)
+    } else {
+        retVal.reject(new Error('No image to query against'));
+    }
+
+    return retVal.promise;
+};
+
+/**
+ * Actual query implementation
+ */
+Image._queryByImage = function(image, options) {
+    var retVal = defer(),
+        db = global._db,
+        query = 'SELECT `image_id`, (',
+        tempArr = [],
+        params = {},
+        i = 1,
+        start = Date.now();
+
+    for (; i < 5; i++) {
+        tempArr.push('ABS(`image_hist_r' + i + '` - :imageR' + i + ')');
+        params['imageR' + i] = image.histogram.red[i - 1];
+        tempArr.push('ABS(`image_hist_g' + i + '` - :imageG' + i + ')');
+        params['imageG' + i] = image.histogram.green[i - 1];
+        tempArr.push('ABS(`image_hist_b' + i + '` - :imageB' + i + ')');
+        params['imageB' + i] = image.histogram.blue[i - 1];
+    }
+
+    query += tempArr.join(' + ') + ') AS distance FROM `images` WHERE image_id IN (SELECT x.`image_id` FROM `posts` p INNER JOIN `post_images` x ON x.`post_id` = p.`post_id` WHERE ';
+
+    if (options.sources) {
+        tempArr = [];
+        if (_.isArray(options.sources)) {
+            tempArr = options.sources;
+        } else if (_.isNumber(options.sources)) {
+            tempArr = [ options.sources ];
+        } else if (_.isString(options.sources)) {
+            options.sources = options.sources.split(',');
+            for (var i = 0, count = options.sources.length; i < count; i++) {
+                tempArr.push(parseInt(options.sources[i]));
+            }
+        }
+        query += 'source_id IN (' + tempArr.join(',') + ') AND ';
+    }
+
+    query += '1) ORDER BY distance ASC, image_id DESC';
+
+    params['limit'] = _.isNumber(options.limit) ? options.limit : 25;
+    query += ' LIMIT :limit';
+
+    db.query(query, params).then(function(results) {
+        var ids = [];
+        _.each(results, function(item) {
+            ids.push(item.image_id);
+        });
+
+        // Return the cache item for each augmented with the distance number
+        Item.query({ imageId: ids }).then(function(images) {
+            for (var i = 0, count = results.length; i < count; i++) {
+                images[i].distance = results[i].distance;
+            }
+            retVal.resolve(images);
+            console.log((Date.now() - start) + 'ms for reverse lookup');
+        }).fail(function(err) {
+            retVal.reject(err);
+        });
     }).fail(function(err) {
         retVal.reject(err);
     });
