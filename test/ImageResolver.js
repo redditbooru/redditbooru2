@@ -98,4 +98,14 @@ describe('ImageResolver test suite', function() {
         });
     });
 
+    describe('deviantArt tests', function() {
+        it('should resolve to an image URL', function(done) {
+            ImageResolver.getImageListFromUrl('http://dxprog.deviantart.com/art/It-s-a-Beautiful-Night-to-Watch-Firefly-s-401973291').then(function(images) {
+                expect(images.length).to.be(1);
+                expect(images[0]).to.be('http://th06.deviantart.net/fs71/PRE/f/2013/265/d/5/it_s_a_beautiful_night_to_watch_firefly_s__by_dxprog-d6nbokr.jpg');
+                done();
+            });
+        });
+    });
+
 });
