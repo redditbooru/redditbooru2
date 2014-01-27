@@ -1,5 +1,6 @@
 var _ = require('underscore'),
     mongo = require('../../lib/mongo.js'),
+    ImageResolver = require('../../lib/ImageResolver'),
 
     DEFAULT_QUERY = {
         limit: 25,
@@ -9,7 +10,13 @@ var _ = require('underscore'),
         offset: 0,
         nsfw: false,
         minDate: null,
-        maxDate: null
+        maxDate: null,
+        afterDate: null,
+        user: null,
+        externalId: null,
+        postId: null,
+        imageId: null,
+        afterId: null
     },
 
     Item = {
@@ -32,6 +39,7 @@ var _ = require('underscore'),
                 nsfw: post.nsfw,
                 width: image.width,
                 height: image.height,
+                thumbUrl: ImageResolver.getThumbUrl(image.cdnUrl)
             };
         },
 
@@ -58,14 +66,38 @@ var _ = require('underscore'),
                 }
             }
 
+            // Old API backwards compatibility
+            options.maxDate = options.afterDate ? options.afterDate : options.maxDate;
             if (options.minDate || options.maxDate) {
                 query.date = {};
                 if (options.minDate) {
-                    query.date.$gte = options.minDate;
+                    query.date.$gte = parseInt(options.minDate);
                 }
                 if (options.maxDate) {
-                    query.date.$lte = options.maxDate;
+                    query.date.$lte = parseInt(options.maxDate);
                 }
+            }
+
+            if (_.isArray(options.imageId)) {
+                query.imageId = { $in: options.imageId };
+            } else if (options.imageId) {
+                query.imageId = parseInt(options.imageId);
+            }
+
+            if (options.postId) {
+                query.postId = parseInt(options.postId);
+            }
+
+            if (options.externalId) {
+                query.externalId = options.externalId;
+            }
+
+            if (options.user) {
+                query.userName = options.user;
+            }
+
+            if (options.afterId) {
+                query.afterId = { $lt: options.afterId };
             }
 
             sort[options.sort] = -1;
