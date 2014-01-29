@@ -1,4 +1,5 @@
 var Item = require('../models/cache/item'),
+    Image = require('../models/db/image'),
     Response = require('../lib/Response');
 
 exports.api = function(req, res) {
@@ -14,12 +15,13 @@ exports.api = function(req, res) {
             minDate: q.minDate || null,
             maxDate: q.maxDate || null,
             user: q.user || null,
-            imageUrl: q.imageUri || null // retaining old name for BC
+            imageUrl: q.imageUri || q.imageUrl || null // retaining old name for BC
         },
         retVal = null,
-        start = Date.now();
+        start = Date.now(),
+        queryMethod = options.imageUrl ? Image.queryByImage : Item.query;
 
-    Item.query(options).then(function(results) {
+    queryMethod(options).then(function(results) {
         response.writeJSON(results, true);
     }).fail(function(err) {
         response.writeJSON({ err: true, msg: err }, true);
