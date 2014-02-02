@@ -27,7 +27,7 @@ var _ = require('underscore'),
 
     // The queue runner object
     queueRunner = null,
-    _async = null, // shorthand for queueRunner.async
+    async = null, // shorthand for queueRunner.async
 
     // This is a list of new items being worked on that can be used to save data integrity in case of a failure
     newPosts = [],
@@ -37,6 +37,10 @@ var _ = require('underscore'),
     log = function(logHead, message) {
         _log.write(logHead + ' ' + message + '\n');
         console.log(logHead + ' ' + message);
+    },
+
+    async = function(promise) {
+        return queueRunner.async(promise);
     },
 
     /**
@@ -64,19 +68,19 @@ var _ = require('underscore'),
 
     getRedditData = function(subreddit, source, period) {
         var logHead = '[reddit/' + subreddit + ']';
-        log(' -- Getting post data for ' + subreddit + ' -- ');
+        log(logHead, 'Getting data from reddit');
 
-        _async(reddit.getDataListing(subreddit, 100, period)).then(function(data) {
+        async(reddit.getDataListing(subreddit, 100, period)).then(function(data) {
 
             log(logHead, 'Finished fetching data for ' + subreddit);
 
             if (_.has(data, 'data') && _.has(data.data, 'children')) {
                 _.each(data.data.children, function(post) {
                     var author = post.data.author;
-                    _async(Post.createFromRedditPost(post.data)).then(function(post) {
+                    async(Post.createFromRedditPost(post.data)).then(function(post) {
 
                         // Check for an existing post with this reddit ID
-                        _async(Post.query([ { col: 'externalId', val: post.externalId } ])).then(function(row) {
+                        async(Post.query([ { col: 'externalId', val: post.externalId } ])).then(function(row) {
                             if (!row.length) {
                                 log(logHead, 'New post: ' + post.title + ' (' + post.externalId + ')');
                                 post.sourceId = source.id;
@@ -100,7 +104,7 @@ var _ = require('underscore'),
     },
 
     assignImageToPost = function(postId, imageId, logHead) {
-        _async((new ImagePost({ post_id: postId, image_id: imageId })).sync()).then(function(result) {
+        async((new ImagePost({ post_id: postId, image_id: imageId })).sync()).then(function(result) {
             log(logHead, 'Image ' + imageId + ' assigned successfully');
         }).fail(function(err) {
             log(logHead, 'Error syncing image relationship for ' + imageId + ': ' + err);
@@ -113,19 +117,19 @@ var _ = require('underscore'),
         item.data = item.data.post;
         log(logHead, 'Inserting into database');
 
-        _async(item.data.sync()).then(function(post) {
+        async(item.data.sync()).then(function(post) {
             log(logHead, 'Insert succeeded. Resolving link to images');
-            _async(ImageResolver.getImageListFromUrl(post.link)).then(function(images) {
+            async(ImageResolver.getImageListFromUrl(post.link)).then(function(images) {
                 log(logHead, '"' + post.link + '" resolved to ' + images.length + ' images');
                 _.each(images, function(url) {
                     // Check to see if this image has been loaded already. We want to avoid dupes
-                    _async(Image.query([ { col: 'url', val: url } ])).then(function(result) {
+                    async(Image.query([ { col: 'url', val: url } ])).then(function(result) {
                         var imageObj = null;
                         if (!result.length) {
                             log(logHead, 'Retrieving new image ' + url);
-                            _async(Image.createFromUrl(url)).then(function(image) {
+                            async(Image.createFromUrl(url)).then(function(image) {
                                 log(logHead, 'Image ' + url + ' loaded and processed');
-                                _async(image.sync()).then(function(image) {
+                                async(image.sync()).then(function(image) {
                                     log(logHead, 'Image ' + url + ' synced to database with ID ' + image.id);
 
                                     // Assign the image to the post
@@ -133,7 +137,7 @@ var _ = require('underscore'),
 
                                     // Create the cache item
                                     var item = Item.createItem(post, image, source, author);
-                                    _async(mongo.save('posts', item)).then(function(result) {
+                                    async(mongo.save('posts', item)).then(function(result) {
                                         log(logHead, 'Cache item created for ' + image.id);
                                     }).fail(function(err) {
                                         log(logHead, 'Error syncing image to mongo cache: ' + err);
@@ -169,7 +173,7 @@ var _ = require('underscore'),
             item.data.row.dateUpdated = time;
             item.data.row.keywords = item.data.post.keywords;
 
-            _async(item.data.row.sync()).then(function(result) {
+            async(item.data.row.sync()).then(function(result) {
                 log(logHead, 'Post updated');
             }).fail(function(err) {
                 log(logHead, 'Error updating post: ' + err);
@@ -197,17 +201,21 @@ var _ = require('underscore'),
 
     };
 
-queueRunner = new QueueRunner({ delay: TIMEOUT_RUN_QUEUE, limiter: MAX_ACTIVE_ITEMS }, queueRunnerCallback);
-_async = queueRunner.async;
+queueRunner = new QueueRunner({ delay: TIMEOUT_RUN_QUEUE, limiter: MAX_ACTIVE_ITEMS });
+queueRunner.on('processItem', queueRunnerCallback);
+queueRunner.on('queueEmpty', function() {
+    process.exit();
+});
+
 getSourcesData();
 queueRunner.start();
 
 process.on('exit', function() {
-    log('Shutting down');
+    log('[main]', 'Shutting down');
     _log.close();
 });
 
 process.on('uncaughtException', function(err) {
-    log('Uncaught exception');
-    log(err.stack);
+    log('[main]', 'Uncaught exception');
+    log('[main]', err.stack);
 });
