@@ -24,6 +24,7 @@ exports.api = function(req, res) {
     queryMethod(options).then(function(results) {
         response.writeJSON(results, true);
     }).fail(function(err) {
+        console.log(err);
         response.writeJSON({ err: true, msg: err }, true);
     });
 };
