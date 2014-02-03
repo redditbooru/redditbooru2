@@ -162,7 +162,9 @@ Image._queryByImage = function(image, options) {
         // Return the cache item for each augmented with the distance number
         Item.query({ imageId: ids }).then(function(images) {
             for (var i = 0, count = results.length; i < count; i++) {
-                images[i].distance = results[i].distance;
+                if (images[i] && images[i].imageId == results[i].image_id) {
+                    images[i].distance = results[i].distance;
+                }
             }
             retVal.resolve(images);
             console.log((Date.now() - start) + 'ms for reverse lookup');
@@ -183,12 +185,11 @@ Image._queryByImage = function(image, options) {
  */
 Image.prototype.sync = function() {
     var retVal = defer();
-        insert = !(this.id > 0),
-        that = this;
+        insert = !(this.id > 0);
 
     Dal.prototype.sync.call(this).then(function(image) {
-        if (insert && that.type) {
-            var fileName = base.decTo36(image.id) + '.' + that.type;
+        if (insert && image.type) {
+            var fileName = base.decTo36(image.id) + '.' + image.type;
             ImageIO.saveImage(image.url, fileName).then(function() {
                 image.cdnUrl = image._generateCdnUrl();
                 retVal.resolve(image);
