@@ -9,7 +9,9 @@
         AVERAGE_COLUMN_WIDTH = 300,
 
         // The number of pixels between each image
-        IMAGE_GUTTER = 20;
+        IMAGE_GUTTER = 20,
+
+        SOURCE_UPDATE_DELAY = 250;
 
     RB.ImageView = Backbone.View.extend({
 
@@ -19,41 +21,98 @@
         },
 
         collection: null,
+        sources: [ 1 ], // TODO - make this not hard coded
 
         events: {
-
+            'click .more-row button': 'updateImageData'
         },
 
         initialize: function($el, collection) {
             this.collection = collection;
             this.$el = $el;
             this.calculateWindowColumns();
-            $window.on('ImageView.resize', _.bind(this.calculateWindowColumns, this));
+            $window.on('resize', _.bind(this.calculateWindowColumns, this));
+        },
+
+        updateImageData: function(evt) {
+            var that = this;
+            this.collection.fetch({
+                remove: false,
+                data: {
+                    sources: this.sources.join(',')
+                },
+                processData: true,
+                success: function() {
+                    that.render();
+                }
+            });
+        },
+
+        updateSources: function(sources) {
+            var currentSources = this.sources.join(','),
+                newSources = sources.join(','),
+                that = this;
+
+            if (currentSources !== newSources) {
+                // Wait for a bit just in case the user checks more sources
+                this.sources = sources;
+                clearTimeout(this._sourceUpdateTimer);
+                this._sourceUpdateTimer = setTimeout(function() {
+                    // Clear out the old, crufty data
+                    that.collection.reset();
+                    that.updateImageData();
+                }, SOURCE_UPDATE_DELAY);
+            }
+
         },
 
         render: function() {
 
-            var count = 0,
-                itemsToRender = new RB.ImageCollection(),
-                out = '';
+            var itemsToRender = new RB.ImageCollection(),
+                out = '',
+                newItems = 0,
+                append = false,
+                $el = this.$el;
 
             this.collection.each(function(item) {
+                
                 itemsToRender.push(item);
-                count++;
-                if (count === this.columns) {
-                    out = out.concat(this._drawColumn(itemsToRender));
+                
+                if (item.rendered) {
+                    append = true;
+                } else {
+                    newItems++;
+                    item.rendered = true;
+                }
+
+                if (itemsToRender.length === this.columns) {
+
+                    // Only add this to the output if there were new items on this row
+                    if (newItems) {
+                        out = out.concat(this._drawColumn(itemsToRender));
+                    }
+
                     itemsToRender.reset();
+                    newItems = 0;
                     count = 0;
                 }
             }, this);
 
-            if (count > 0) {
+            if (itemsToRender.length > 0) {
                 out = out.concat(this._drawColumn(itemsToRender));
             }
 
-            out = out.concat(this.templates.moreRow());
+            // If there is already content on the page, we don't want to force a complete refresh on a partial
+            // update, so remove the more button and the last row and append the diff
+            if (append) {
+                $el.find('.more-row, .image-row:last').remove();
+                $el.append(out);
+            } else {
+                $el.html(out);
+            }
 
-            this.$el.html(out);
+            // Slap on the more button
+            $el.append(this.templates.moreRow());
 
         },
 
@@ -68,7 +127,6 @@
                 this.width -= this.columns * IMAGE_GUTTER;
                 this.render();
             }
-            // console.log(this.columns);
         },
 
         _drawColumn: function(images) {

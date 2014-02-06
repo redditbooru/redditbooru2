@@ -8,15 +8,10 @@
             return {
                 title: '',
                 value: '',
+                name: '',
                 checked: false
             };
-        },
-
-        initialize: function(data) {
-            this.title = _.has('title', data);
-            this.value = _.has('value', data);
         }
-
     });
 
 }());

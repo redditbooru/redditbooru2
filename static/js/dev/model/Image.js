@@ -25,8 +25,9 @@
                 nsfw: null,
                 thumb: null,
                 idxInAlbum: null,
-                age: null
-            }
+                age: null,
+                rendered: false
+            };
         }
 
     });
