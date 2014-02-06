@@ -6,7 +6,7 @@ var _ = require('underscore'),
         limit: 25,
         keywords: null,
         sources: null,
-        sort: 'date',
+        sort: 'dateCreated',
         offset: 0,
         nsfw: false,
         minDate: null,
@@ -32,10 +32,10 @@ var _ = require('underscore'),
                 userName: author,
                 title: post.title,
                 keywords: post.keywords,
-                link: image.cdnUrl,
+                cdnUrl: image.cdnUrl,
                 redditId: post.externalId,
                 score: post.score,
-                date: post.dateCreated,
+                dateCreated: post.dateCreated,
                 nsfw: post.nsfw,
                 width: image.width,
                 height: image.height,
@@ -69,12 +69,12 @@ var _ = require('underscore'),
             // Old API backwards compatibility
             options.maxDate = options.afterDate ? options.afterDate : options.maxDate;
             if (options.minDate || options.maxDate) {
-                query.date = {};
+                query.dateCreated = {};
                 if (options.minDate) {
-                    query.date.$gte = parseInt(options.minDate);
+                    query.dateCreated.$gt = parseInt(options.minDate);
                 }
                 if (options.maxDate) {
-                    query.date.$lte = parseInt(options.maxDate);
+                    query.dateCreated.$lt = parseInt(options.maxDate);
                 }
             }
 
