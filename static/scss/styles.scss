@@ -40,6 +40,7 @@ header {
     padding: 20px 20px 15px;
     border-bottom: 1px solid $grey;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
 
     h1 {
         font: 36px/1 'MG Thin', sans-serif;
@@ -129,11 +130,16 @@ header {
 
 #images {
     padding: 0 5px;
+    margin-top: 86px;
     .image-row {
         overflow: hidden;
         margin-bottom: 10px;
         padding: 5px 0;
         .image {
+            display: block;
+            border: 0;
+            text-decoration: none;
+            position: relative;
             float: left;
             margin-left: 20px;
             height: 250px;
@@ -141,15 +147,62 @@ header {
             background-size: cover;
             background-position: center center;
 
+            .nsfw {
+                display: block;
+                position: absolute;
+                top: -30px;
+                left: -30px;
+                bottom: -30px;
+                right: -30px;
+                -webkit-filter: blur(15px);
+                clip: rect(30px, 30px, 90px, 90px);
+            }
+
             &:first-child {
                 margin-left: 0;
             }
+
+            .information {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.75);
+                overflow: hidden;
+
+                dt {
+                    position: absolute;
+                    left: -9999px;
+                    top: -9999px;
+                }
+
+                dd {
+                    color: #fff;
+                    padding: 5px 10px;
+                    font: 14px/1 'MG Thin';
+                    letter-spacing: 1px;
+
+                    &.score {
+                        float: right;
+                        background: url(/images/upvotes.png) no-repeat left 7px;
+                        padding-left: 12px;
+                    }
+
+                    &.sub {
+                        float: left;
+                    }
+
+                }
+
+            }
+
         }
     }
 
     .more-row {
         border-top: 1px solid $grey;
         position: relative;
+
         button {
             border: 0;
             background: none;

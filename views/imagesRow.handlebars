@@ -1,5 +1,12 @@
 <div class="image-row">
     {{#each .}}
-        <div class="image" style="width: {{viewWidth}}px; background-image: url(//beta.redditbooru.com/cache/{{thumbUrl}}_300_300.jpg);" data-id="{{postId}}"></div>
+        <a class="image" href="http://redd.it/{{redditId}}" style="width: {{viewWidth}}px; background-image: url(//beta.redditbooru.com/cache/{{thumbUrl}}_300_300.jpg);" data-id="{{postId}}" target="_blank">
+            <dl class="information">
+                <dt>Posted to</dt>
+                <dd class="sub">{{sourceName}}</dd>
+                <dt>Score</dt>
+                <dd class="score">{{score}}</dd>
+            </dl>
+        </a>
     {{/each}}
 </div>
