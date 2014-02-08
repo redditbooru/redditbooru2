@@ -8,6 +8,9 @@
         // This number helps determine the total number of columns there should be per row
         AVERAGE_COLUMN_WIDTH = 300,
 
+        // MINUMUM WIDTH TO HEIGHT RATIO ALLOWED
+        minRatio = 0.9,
+
         // The number of pixels between each image
         IMAGE_GUTTER = 20,
 
@@ -31,7 +34,7 @@
             this.collection = collection;
             this.$el = $el;
             this.calculateWindowColumns();
-            $window.on('resize', _.bind(this.calculateWindowColumns, this));
+            $(window).on('resize', _.bind(this.calculateWindowColumns, this));
         },
 
         updateImageData: function(evt) {
@@ -98,14 +101,17 @@
                 }
             }, this);
 
+            // Originally, at this point we'd force render the last row, but it's going to look ugly, so don't
+            /*
             if (itemsToRender.length > 0) {
                 out = out.concat(this._drawColumn(itemsToRender));
             }
+            */
 
             // If there is already content on the page, we don't want to force a complete refresh on a partial
             // update, so remove the more button and the last row and append the diff
             if (append) {
-                $el.find('.more-row, .image-row:last').remove();
+                $el.find('.more-row').remove();
                 $el.append(out);
             } else {
                 $el.html(out);
@@ -141,6 +147,7 @@
             // and sum them all together for later
             _.each(images, function(image) {
                 image.widthHeightRatio = image.width / image.height;
+                image.widthHeightRatio = image.widthHeightRatio < minRatio ? minRatio : image.widthHeightRatio;
                 widthRatioSum += image.widthHeightRatio;
             });
 
