@@ -8,7 +8,6 @@
         model: RB.Image,
 
         // Params
-        sources: [ 1 ],
         lastDate: 0,
 
         url: function(options) {
@@ -19,11 +18,24 @@
         initialize: function() {
             var that = this;
             this.on('add', function(item) {
-                var date = parseInt(item.attributes.dateCreated);
-                if (date < that.lastDate || that.lastDate === 0) {
-                    that.lastDate = item.attributes.dateCreated;
-                }
+                that._checkLastDate.call(that, item);
             });
+
+            this.on('reset', function(stuff) {
+                that.lastDate = 0;
+                _.each(that.models, function(item) {
+                    console.log(item.attributes);
+                    that._checkLastDate.call(that, item);
+                });
+            });
+
+        },
+
+        _checkLastDate: function(item) {
+            var date = parseInt(item.attributes.dateCreated);
+            if (date < this.lastDate || this.lastDate === 0) {
+                this.lastDate = item.attributes.dateCreated;
+            }
         }
 
     });
