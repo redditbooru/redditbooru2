@@ -14,7 +14,7 @@
         // The number of pixels between each image
         IMAGE_GUTTER = 20,
 
-        SOURCE_UPDATE_DELAY = 250;
+        SOURCE_UPDATE_DELAY = 1000;
 
     RB.ImageView = Backbone.View.extend({
 
@@ -27,7 +27,7 @@
         sources: [ 1 ], // TODO - make this not hard coded
 
         events: {
-            'click .more-row button': 'updateImageData'
+            'click .more-row button': 'handleMoreClick'
         },
 
         initialize: function($el, collection) {
@@ -35,38 +35,16 @@
             this.$el = $el;
             this.calculateWindowColumns();
             $(window).on('resize', _.bind(this.calculateWindowColumns, this));
-        },
-
-        updateImageData: function(evt) {
-            var that = this;
-            this.collection.fetch({
-                remove: false,
-                data: {
-                    sources: this.sources.join(',')
-                },
-                processData: true,
-                success: function() {
-                    that.render();
-                }
+            this.collection.on('updated', _.bind(function() {
+                this.render();
+            }, this));
+            this.collection.on('reset', function() {
+                $el.empty();
             });
         },
 
-        updateSources: function(sources) {
-            var currentSources = this.sources.join(','),
-                newSources = sources.join(','),
-                that = this;
-
-            if (currentSources !== newSources) {
-                // Wait for a bit just in case the user checks more sources
-                this.sources = sources;
-                clearTimeout(this._sourceUpdateTimer);
-                this._sourceUpdateTimer = setTimeout(function() {
-                    // Clear out the old, crufty data
-                    that.collection.reset();
-                    that.updateImageData();
-                }, SOURCE_UPDATE_DELAY);
-            }
-
+        handleMoreClick: function(evt) {
+            this.collection.loadNext();
         },
 
         render: function() {
@@ -110,14 +88,10 @@
 
             // If there is already content on the page, we don't want to force a complete refresh on a partial
             // update, so remove the more button and the last row and append the diff
-            if (append) {
-                $el.find('.more-row').remove();
-                $el.append(out);
-            } else {
-                $el.html(out);
-            }
 
             // Slap on the more button
+            $el.find('.more-row').remove();
+            $el.append(out);
             $el.append(this.templates.moreRow());
 
         },

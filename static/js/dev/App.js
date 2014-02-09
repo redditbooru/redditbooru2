@@ -1,5 +1,5 @@
 /**
- * RedditBooru main app view
+ * RedditBooru main app view (controller)
  */
 (function(undefined) {
 
@@ -29,7 +29,12 @@
                 updated.push(item.attributes.value);
             });
 
-            this.views.images.updateSources(updated);
+            this.collections.images.setQueryOption('sources', updated.join(','));
+        },
+
+        // Router entry points
+        search: function(query) {
+
         }
 
     });
